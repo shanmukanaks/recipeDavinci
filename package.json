@@ -9,8 +9,23 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo/vector-icons": "^13.0.0",
+    "@react-native-async-storage/async-storage": "~1.17.3",
+    "@react-native-community/netinfo": "9.3.5",
+    "@react-native-picker/picker": "2.4.8",
+    "aws-amplify": "^5.0.13",
+    "aws-amplify-react-native": "^7.0.2",
+    "clarifai-nodejs-grpc": "^8.0.0",
     "expo": "~47.0.12",
+    "expo-camera": "~13.1.0",
+    "expo-constants": "~14.0.2",
+    "expo-image-manipulator": "~11.0.0",
+    "expo-image-picker": "~14.0.2",
+    "expo-images-picker": "^2.5.1",
+    "expo-media-library": "~15.0.0",
     "expo-status-bar": "~1.4.2",
+    "mime-types": "^2.1.35",
+    "path": "^0.12.7",
     "react": "18.1.0",
     "react-native": "0.70.5"
   },

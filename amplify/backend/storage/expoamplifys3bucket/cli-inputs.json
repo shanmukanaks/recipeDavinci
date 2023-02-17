@@ -1,0 +1,16 @@
+{
+  "resourceName": "expoamplifys3bucket",
+  "policyUUID": "b610f0e5",
+  "bucketName": "expoamplifys3bucketname",
+  "storageAccess": "authAndGuest",
+  "guestAccess": [
+    "READ"
+  ],
+  "authAccess": [
+    "CREATE_AND_UPDATE",
+    "READ",
+    "DELETE"
+  ],
+  "triggerFunction": "NONE",
+  "groupAccess": {}
+}
