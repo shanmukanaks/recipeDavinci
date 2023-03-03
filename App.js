@@ -1,15 +1,42 @@
 import { withAuthenticator } from "aws-amplify-react-native";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Text, View, StyleSheet, TouchableOpacity, Image } from "react-native";
+import {
+  ImageBackground,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  AppRegistry,
+  SafeAreaView,
+  Dimensions,
+  Animated,
+  ScrollView,
+} from "react-native";
 import Constants from "expo-constants";
 import { Camera, CameraType } from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
 import { MaterialIcons } from "@expo/vector-icons";
-import Button from "./src/Button";
+// import Button from "./src/components/Button";
+import Button_Switch_Flash from "./src/components/Button_Switch_Flash";
 import { Amplify, Storage } from "aws-amplify";
 import config from "./src/aws-exports";
 import mime from "mime-types";
+import {
+  Avatar,
+  Button,
+  Card,
+  Text,
+  FAB,
+  IconButton,
+  MD3Colors,
+} from "react-native-paper";
+// import { Provider as PaperProvider } from "react-native-paper";
+import {
+  MD3LightTheme as DefaultTheme,
+  Provider as PaperProvider,
+} from "react-native-paper";
+import { name as appName } from "./app.json";
 
 Amplify.configure({
   ...config,
@@ -18,7 +45,9 @@ Amplify.configure({
   },
 });
 
-// Storage.configure({ region: "us-west-2" });
+const OFFSET = 40;
+const ITEM_WIDTH = Dimensions.get("window").width - OFFSET * 2;
+const ITEM_HEIGHT = (Dimensions.get("window").height - OFFSET * 2) * 0.75;
 
 function App() {
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
@@ -29,7 +58,14 @@ function App() {
   const [posArr, setPosArr] = useState([]);
   const [guessInc, setGuessInc] = useState(0);
   const [ingredients, setIngredients] = useState([]);
-  const [recipe, setRecipe] = useState(null);
+  const [recipe, setRecipe] = useState([]);
+  const [ing, setIng] = useState([], []);
+  const [inst, setInst] = useState([], []);
+  const [loading, setLoading] = useState(false);
+  const [recipeDict, setRecipeDict] = useState([]);
+  const [recipeGenerated, setRecipeGenerated] = useState(false);
+  const LeftContent = (props) => <Avatar.Icon {...props} icon="folder" />;
+  const scrollX = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     (async () => {
@@ -39,25 +75,23 @@ function App() {
     })();
   }, []);
 
+  const theme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: "blue",
+      secondary: "yellow",
+    },
+  };
+
   const takePicture = async () => {
     if (cameraRef) {
       try {
+        setLoading(true);
         const data = await cameraRef.current.takePictureAsync();
         console.log(data);
         setImage(data.uri);
-      } catch (error) {
-        console.log(error);
-      }
-    }
-  };
-
-  const savePicture = async () => {
-    if (image) {
-      try {
-        const asset = await MediaLibrary.createAssetAsync(image);
-        alert("Picture saved! 🎉");
-        setImage(null);
-        console.log("saved successfully");
+        setLoading(false);
       } catch (error) {
         console.log(error);
       }
@@ -72,7 +106,9 @@ function App() {
     const blobData = await imageData.blob();
 
     try {
+      setLoading(true);
       await Storage.put(imageName, blobData, access);
+      setLoading(false);
     } catch (err) {
       console.log("error1: ", err);
     }
@@ -133,57 +169,250 @@ function App() {
       redirect: "follow",
     };
 
-    fetch(
-      "https://mwz304qtva.execute-api.us-east-2.amazonaws.com/go_recipe",
-      requestOptions
-    )
-      .then((response) => response.text())
-      .then((result) => setRecipe(result.recipe))
-      .catch((error) => console.log("error", error));
+    try {
+      setLoading(true);
+      await fetch(
+        "https://mwz304qtva.execute-api.us-east-2.amazonaws.com/go_recipe",
+        requestOptions
+      )
+        .then((resp) => resp.json())
+        .then((json) => {
+          setRecipeDict(json);
+          console.log("json: ", json.ing);
+          json.map((item, idx) => {
+            setIng((ing) => [...ing, item.ing]);
+            setInst((inst) => [...inst, item.inst]);
+            console.log("item.ing: ", item.ing[0]);
+            console.log("item.inst: ", item.inst[1]);
+          });
+        })
+        .catch((error) => console.error("error", error))
+        .finally(() => setLoading(false));
+      console.log("recipeDict_1: ", recipeDict);
+      setRecipeGenerated(true);
+      setLoading(false);
+      console.log("type: ", typeof recipeDict.ing);
+      console.log("type1: ", typeof recipeDict.inst);
+      console.log("val: ", recipeDict.ing);
+      console.log("val1: ", recipeDict.inst);
+    } catch (error) {
+      console.log(error);
+    }
+
+    console.log("recipeDict_2: ", recipeDict);
+  };
+
+  // const createRecipeDict = () => {
+  //   for (let i = 0; i < recipe.length; i++) {
+  //     setRecipeDict = [
+  //       ...recipeDict,
+  //       {
+  //         recipe: recipe[i],
+  //         ingredients: ing[i],
+  //         instructions: inst[i],
+  //       },
+  //     ];
+  //     console.log("recipeDict: ", recipeDict);
+  //   }
+  // };
+
+  const renderItem = () => {
+    console.log("recipeDict_3: ", recipeDict);
+  };
+
+  const printingmachine = () => {
+    recipeDict.map((recipe, index) => {
+      console.log("recipe.recipe: ", recipe.recipe);
+      console.log("recipe.ing: ", recipe.ing);
+      console.log("recipe.inst: ", recipe.inst);
+      setIng(recipe.ing);
+      setInst(recipe.inst);
+    });
+    console.log("recipeDict_3: ", recipeDict);
+    console.log("recipeDict_4: ", recipeDict.length > 0);
   };
 
   if (hasCameraPermission === false) {
     return <Text>No access to camera</Text>;
   }
 
+  let recipeCard;
+
+  if (ingredients.length > 0 && !recipeGenerated) {
+    recipeCard = (
+      <FAB
+        style={{
+          flex: 1,
+          backgroundColor: "lightblue",
+        }}
+        animated={true}
+        color={ingredients.length > 0 ? "white" : "grey"}
+        disabled={false}
+        visible={true}
+        loading={loading}
+        icon="play"
+        onPress={ingredients.length > 0 ? getRecipes : null}
+        // label='EXTENDED FAB'
+      />
+    );
+  } else if (recipeGenerated) {
+    recipeCard = (
+      <></>
+      // <View>
+      //   {recipeDict.map((recipe, index) => (
+      //     <View key={index}>
+      //       <Text>{recipe.recipe[0]}</Text>
+      //       <Text>{recipe.ing[0]}</Text>
+      //       <Text>{recipe.inst[0]}</Text>
+      //     </View>
+      //   ))}
+      // </View>
+    );
+  }
+
   let button;
   if (image) {
+    // console.log(recipeDict.recipe);
+    // console.log(recipeDict.ing);
+    // console.log(recipeDict.inst);
     if (posArr[0]) {
       button = (
         <View
           style={{
             flexDirection: "row",
-            justifyContent: "space-between",
-            paddingHorizontal: 50,
+            // justifyContent: "space-between",
+            position: "absolute",
+            justifyContent: "center",
+            alignItems: "center",
+            bottom: 0,
+            padding: 15,
+            width: "100%",
+            // paddingHorizontal: 50,
           }}
         >
-          <Text>{posArr[guessInc]}</Text>
-          {/* if (posArr.length === (guessInc - 1)) */}
-          <Button onPress={() => setGuessInc(guessInc - 1)} icon="arrowleft" />
-          <Button title={posArr[guessInc]} />
-          <Button onPress={() => setGuessInc(guessInc + 1)} icon="arrowright" />
-          <Button
-            onPress={() => {
-              setImage(null);
-              setPosArr([]);
-              setGuessInc(0);
-            }}
-            icon="reload1"
-          />
-          <Button
-            onPress={() => {
-              setIngredients((ingredients) => [
-                ...ingredients,
-                posArr[guessInc],
-              ]);
-              setImage(null);
-              setPosArr([]);
-              setGuessInc(0);
-            }}
-            icon="check"
-          />
-
-          {/* <Button title="Save" onPress={storePicture} icon="check" /> */}
+          <Card>
+            <View
+              style={{
+                flexDirection: "row",
+                marginTop: 30,
+                marginBottom: 30,
+                padding: 10,
+                width: "100%",
+                // paddingHorizontal: 50,
+              }}
+            >
+              <FAB
+                style={{
+                  backgroundColor: "skyblue",
+                  padding: 10,
+                }}
+                animated={true}
+                color="white"
+                disabled={false}
+                visible={true}
+                loading={false}
+                small
+                icon="arrow-left"
+                onPress={() => setGuessInc(guessInc - 1)}
+                // label='EXTENDED FAB'
+              />
+              <Text
+                variant="headlineMedium"
+                ellipsizeMode="tail"
+                numberOfLines={1}
+                style={{ width: 100 }}
+              >
+                {posArr[guessInc]}
+              </Text>
+              <FAB
+                style={{
+                  backgroundColor: "skyblue",
+                  padding: 10,
+                }}
+                animated={true}
+                color="white"
+                disabled={false}
+                visible={true}
+                loading={false}
+                small
+                icon="arrow-right"
+                onPress={() => setGuessInc(guessInc + 1)}
+                // label='EXTENDED FAB'
+              />
+              <FAB
+                style={{
+                  backgroundColor: "darkorange",
+                  padding: 10,
+                }}
+                animated={true}
+                color="white"
+                disabled={false}
+                visible={true}
+                loading={false}
+                small
+                icon="redo-variant"
+                onPress={() => {
+                  setImage(null);
+                  setPosArr([]);
+                  setGuessInc(0);
+                }}
+                // label='EXTENDED FAB'
+              />
+              <FAB
+                style={{
+                  backgroundColor: "lightgreen",
+                  padding: 10,
+                }}
+                animated={true}
+                color="white"
+                disabled={false}
+                visible={true}
+                loading={false}
+                small
+                icon="check"
+                onPress={() => {
+                  setIngredients((ingredients) => [
+                    ...ingredients,
+                    posArr[guessInc],
+                  ]);
+                  setImage(null);
+                  setPosArr([]);
+                  setGuessInc(0);
+                }}
+                // label='EXTENDED FAB'
+              />
+              {/* <Button
+                onPress={() => setGuessInc(guessInc - 1)}
+                icon="arrow-left"
+                color="orange"
+              /> */}
+              {/* <Text variant="headlineMedium">{posArr[guessInc]}</Text> */}
+              {/* <Button
+                onPress={() => setGuessInc(guessInc + 1)}
+                icon="arrow-right"
+              /> */}
+              {/* <Button
+                onPress={() => {
+                  setImage(null);
+                  setPosArr([]);
+                  setGuessInc(0);
+                }}
+                icon="redo-variant"
+              /> */}
+              {/* <Button
+                onPress={() => {
+                  setIngredients((ingredients) => [
+                    ...ingredients,
+                    posArr[guessInc],
+                  ]);
+                  setImage(null);
+                  setPosArr([]);
+                  setGuessInc(0);
+                }}
+                icon="check"
+              /> */}
+            </View>
+          </Card>
         </View>
       );
     } else {
@@ -191,16 +420,53 @@ function App() {
         <View
           style={{
             flexDirection: "row",
-            justifyContent: "space-between",
-            paddingHorizontal: 50,
+            alignItems: "center",
+            justifyContent: "center",
+            position: "absolute",
+            bottom: 0,
+            padding: 15,
+            flex: 1,
           }}
         >
-          <Button
-            title="Re-take"
+          <FAB
+            style={{
+              flex: 1,
+              justiftyContent: "center",
+              alignItems: "center",
+              textAlign: "center",
+              backgroundColor: "rgba(52, 52, 52, 0)",
+            }}
+            animated={true}
+            color="white"
+            disabled={false}
+            visible={true}
+            loading={loading}
+            mode="flat"
+            size="large"
+            icon="redo-variant"
             onPress={() => setImage(null)}
-            icon="reload1"
-          />
-          <Button title="Save" onPress={storePicture} icon="check" />
+          ></FAB>
+          <FAB
+            style={{
+              flex: 1,
+              justiftyContent: "center",
+              alignItems: "center",
+              textAlign: "center",
+              backgroundColor: "rgba(52, 52, 52, 0)",
+            }}
+            animated={true}
+            color="white"
+            disabled={false}
+            visible={true}
+            loading={loading}
+            icon="robot-outline"
+            mode="flat"
+            size="large"
+            onPress={storePicture}
+          ></FAB>
+
+          {/* <Button onPress={() => setImage(null)} icon="redo-variant" />
+          <Button onPress={storePicture} icon="check" /> */}
         </View>
       );
     }
@@ -208,32 +474,83 @@ function App() {
     button = (
       <View
         style={{
+          display: "flex",
           flexDirection: "row",
-          justifyContent: "space-between",
-          paddingHorizontal: 50,
+          position: "absolute",
+          bottom: 0,
+          padding: 15,
+          justiftyContent: "center",
+          alignItems: "center",
+          textAlign: "center",
+          // paddingHorizontal: 50,
         }}
       >
-        <Button title="Take a picture" onPress={takePicture} icon="camera" />
-        {setIngredients.length > 0 ? (
-          <Button onPress={getRecipes} icon="play" />
-        ) : (
-          <></>
-        )}
+        <View>
+          <FAB
+            style={{
+              justiftyContent: "center",
+              alignItems: "center",
+              textAlign: "center",
+              backgroundColor: "rgba(52, 52, 52, 0)",
+            }}
+            animated={true}
+            color="white"
+            disabled={false}
+            visible={true}
+            loading={loading}
+            icon="menu"
+            mode="flat"
+            size="large"
+            onPress={ingredients.length > 2 ? getRecipes : null}
+            // label='EXTENDED FAB'
+          />
+        </View>
+        <View
+          style={{
+            flex: 1,
+            justiftyContent: "center",
+            alignItems: "center",
+            textAlign: "center",
+          }}
+        >
+          <IconButton
+            style={{
+              backgroundColor: "rgba(52, 52, 52, 0)",
+            }}
+            icon="circle-outline"
+            iconColor="white"
+            size={125}
+            onPress={takePicture}
+          />
+        </View>
+        <View>
+          <FAB
+            style={{
+              justiftyContent: "center",
+              alignItems: "center",
+              textAlign: "center",
+              backgroundColor: "rgba(52, 52, 52, 0)",
+            }}
+            animated={true}
+            color="white"
+            disabled={false}
+            visible={true}
+            loading={loading}
+            icon={
+              ingredients.length > 2 ? "robot-outline" : "robot-off-outline"
+            }
+            mode="flat"
+            size="large"
+            onPress={ingredients.length > 2 ? getRecipes : null}
+            // label='EXTENDED FAB'
+          />
+        </View>
       </View>
     );
   }
 
-  // let recipeButton;
-
-  // if (posArr[0]) {
-  //   recipeButton = <Button onPress={getRecipes} icon="play" />;
-  // } else {
-  //   recipeButton = (
-  //     <Button title="Take a picture" onPress={takePicture} icon="camera" />
-  //   );
-  // }
   let cards;
-  if (!image) {
+  if (!image && !(recipeDict && recipeDict.length > 0)) {
     cards = (
       <Camera
         style={styles.camera}
@@ -245,19 +562,58 @@ function App() {
           style={{
             flexDirection: "row",
             justifyContent: "space-between",
-            paddingHorizontal: 30,
+            padding: 15,
           }}
         >
-          <Button
-            title=""
-            icon="reload1"
+          <FAB
+            style={{
+              // flex: 1,
+              // justifyContent: "center",
+              // alignItems: "center",
+              // width: 50,
+              // height: 50,
+              backgroundColor: "white",
+            }}
+            animated={true}
+            color="black"
+            disabled={false}
+            visible={true}
+            loading={false}
+            small
+            icon="camera-flip"
             onPress={() => {
               setType(
                 type === CameraType.back ? CameraType.front : CameraType.back
               );
             }}
+            // label='EXTENDED FAB'
           />
-          <Button
+          {/* <Button
+            icon="camera-flip"
+            onPress={() => {
+              setType(
+                type === CameraType.back ? CameraType.front : CameraType.back
+              );
+            }}
+          ></Button> */}
+          <FAB
+            style={{
+              // flex: 1,
+              // justifyContent: "center",
+              // alignItems: "center",
+              // width: 50,
+              // height: 50,
+              backgroundColor: "white",
+            }}
+            animated={true}
+            color="black"
+            disabled={false}
+            visible={true}
+            loading={false}
+            small
+            icon={
+              flash === Camera.Constants.FlashMode.off ? "flash" : "flash-off"
+            }
             onPress={() =>
               setFlash(
                 flash === Camera.Constants.FlashMode.off
@@ -265,56 +621,183 @@ function App() {
                   : Camera.Constants.FlashMode.off
               )
             }
-            icon="star"
-            color={flash === Camera.Constants.FlashMode.off ? "gray" : "#fff"}
+            // label='EXTENDED FAB'
           />
+          {/* <Button
+            onPress={() =>
+              setFlash(
+                flash === Camera.Constants.FlashMode.off
+                  ? Camera.Constants.FlashMode.on
+                  : Camera.Constants.FlashMode.off
+              )
+            }
+            icon={
+              flash === Camera.Constants.FlashMode.off ? "flash" : "flash-off"
+            }
+          ></Button> */}
         </View>
+        {button}
       </Camera>
     );
+  } else if (recipeDict && recipeDict.length > 0) {
+    cards = (
+      <View>
+        <Card>
+          <View
+            style={{
+              flexDirection: "row",
+              marginTop: 30,
+              marginBottom: 30,
+              padding: 10,
+              width: "95%",
+              // paddingHorizontal: 50,
+            }}
+          >
+            <ScrollView
+              horizontal={true}
+              decelerationRate={"normal"}
+              snapToInterval={ITEM_WIDTH}
+              style={{ marginTop: 40, paddingHorizontal: 0 }}
+              showsHorizontalScrollIndicator={false}
+              bounces={false}
+              disableIntervalMomentum
+              onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                { useNativeDriver: false }
+              )}
+              scrollEventThrottle={12}
+            >
+              {recipeDict.map((item, idx) => {
+                const inputRange = [
+                  (idx - 1) * ITEM_WIDTH,
+                  idx * ITEM_WIDTH,
+                  (idx + 1) * ITEM_WIDTH,
+                ];
+
+                const translate = scrollX.interpolate({
+                  inputRange,
+                  outputRange: [0.85, 1, 0.85],
+                });
+
+                const opacity = scrollX.interpolate({
+                  inputRange,
+                  outputRange: [0.5, 1, 0.5],
+                });
+
+                return (
+                  <Animated.View
+                    style={{
+                      width: ITEM_WIDTH,
+                      height: ITEM_HEIGHT,
+                      marginLeft: idx === 0 ? OFFSET : undefined,
+                      marginRight:
+                        idx === recipeDict.length - 1 ? OFFSET : undefined,
+                      opacity: opacity,
+                      transform: [{ scale: translate }],
+                    }}
+                  >
+                    <Text variant="titleLarge">{item.recipe}</Text>
+                    <Text variant="titleMedium">Ingredients:</Text>
+                    {ing.map((value, index) => {
+                      <>
+                        <Text variant="titleMedium">Ingredients Array:</Text>
+                        <Text variant="titleSmall">{value}</Text>
+                      </>;
+                    })}
+                    <Text variant="titleSmall">{ing}</Text>
+                    <Text variant="titleMedium">Instructions:</Text>
+                    <Text variant="titleSmall">{item.inst}</Text>
+                  </Animated.View>
+                );
+              })}
+            </ScrollView>
+            {/* {recipeDict.map((recipe, index) => (
+            <View key={index}>
+              <Text variant="headlineMedium">{recipeDict[index].recipe}</Text>
+              <Text variant="headlineSmall">{recipeDict[index].ing}</Text>
+              <Text variant="headlineSmall">{recipeDict[index].inst}</Text>
+            </View>
+          ))} */}
+          </View>
+        </Card>
+        <FAB
+          style={{
+            // flex: 1,
+            // justifyContent: "center",
+            // alignItems: "center",
+            // width: 50,
+            // height: 50,
+            backgroundColor: "darkorange",
+          }}
+          animated={true}
+          color="black"
+          disabled={false}
+          visible={true}
+          loading={false}
+          small
+          icon="redo-variant"
+          onPress={() => {
+            setRecipeDict([]);
+          }}
+          // label='EXTENDED FAB'
+        />
+      </View>
+    );
   } else {
-    cards = <Image source={{ uri: image }} style={styles.camera} />;
+    const imageURI = { uri: image };
+    cards = (
+      <View style={styles.camera}>
+        <ImageBackground
+          source={imageURI}
+          resizeMode="cover"
+          style={styles.camera}
+        >
+          {button}
+        </ImageBackground>
+      </View>
+    );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.controls}>{cards}</View>
-
-      <View style={styles.controls}>{button}</View>
-    </View>
+    <PaperProvider theme={theme}>
+      <SafeAreaView style={styles.MainContainer}>{cards}</SafeAreaView>
+    </PaperProvider>
   );
 }
 
 export default withAuthenticator(App, { includeGreetings: true });
 
+AppRegistry.registerComponent(appName, () => App);
+
 const styles = StyleSheet.create({
-  container: {
+  MainContainer: {
     flex: 1,
     justifyContent: "center",
-    // paddingTop: Constants.statusBarHeight,
-    backgroundColor: "#000",
-    // padding: 8,
   },
-  controls: {
-    flex: 0.5,
-  },
-  button: {
-    height: 40,
-    borderRadius: 6,
-    flexDirection: "row",
-    alignItems: "center",
+  fabStyle: {
+    flex: 1,
     justifyContent: "center",
+    alignItems: "center",
+    width: 50,
+    height: 50,
+    backgroundColor: "darkorange",
   },
-  text: {
-    fontWeight: "bold",
-    fontSize: 16,
-    color: "#E9730F",
-    marginLeft: 10,
+  fabUnavailable: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 50,
+    height: 50,
+    backgroundColor: "grey",
+  },
+  fabPlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 50,
+    height: 50,
   },
   camera: {
-    flex: 5,
-    // borderRadius: 20,
-  },
-  topControls: {
     flex: 1,
   },
 });
