@@ -47,7 +47,7 @@ Amplify.configure({
 
 const OFFSET = 40;
 const ITEM_WIDTH = Dimensions.get("window").width - OFFSET * 2;
-const ITEM_HEIGHT = (Dimensions.get("window").height - OFFSET * 2) * 0.75;
+const ITEM_HEIGHT = (Dimensions.get("window").height - OFFSET * 2) * 0.85;
 
 function App() {
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
@@ -57,12 +57,18 @@ function App() {
   const cameraRef = useRef(null);
   const [posArr, setPosArr] = useState([]);
   const [guessInc, setGuessInc] = useState(0);
-  const [ingredients, setIngredients] = useState([]);
+  const [ingredients, setIngredients] = useState([
+    "rice",
+    "butter",
+    "bell pepper",
+    "egg",
+  ]);
   const [recipe, setRecipe] = useState([]);
   const [ing, setIng] = useState([], []);
   const [inst, setInst] = useState([], []);
+  const [imageDish, setImageDish] = useState([], []);
   const [loading, setLoading] = useState(false);
-  const [recipeDict, setRecipeDict] = useState([]);
+  const [recipeDict, setRecipeDict] = useState({});
   const [recipeGenerated, setRecipeGenerated] = useState(false);
   const LeftContent = (props) => <Avatar.Icon {...props} icon="folder" />;
   const scrollX = React.useRef(new Animated.Value(0)).current;
@@ -178,12 +184,14 @@ function App() {
         .then((resp) => resp.json())
         .then((json) => {
           setRecipeDict(json);
-          console.log("json: ", json.ing);
+          console.log("json: ", json);
           json.map((item, idx) => {
             setIng((ing) => [...ing, item.ing]);
             setInst((inst) => [...inst, item.inst]);
+            setImageDish((image) => [...image, item.image]);
             console.log("item.ing: ", item.ing[0]);
             console.log("item.inst: ", item.inst[1]);
+            console.log("item.image: ", item.image);
           });
         })
         .catch((error) => console.error("error", error))
@@ -201,20 +209,6 @@ function App() {
 
     console.log("recipeDict_2: ", recipeDict);
   };
-
-  // const createRecipeDict = () => {
-  //   for (let i = 0; i < recipe.length; i++) {
-  //     setRecipeDict = [
-  //       ...recipeDict,
-  //       {
-  //         recipe: recipe[i],
-  //         ingredients: ing[i],
-  //         instructions: inst[i],
-  //       },
-  //     ];
-  //     console.log("recipeDict: ", recipeDict);
-  //   }
-  // };
 
   const renderItem = () => {
     console.log("recipeDict_3: ", recipeDict);
@@ -256,25 +250,11 @@ function App() {
       />
     );
   } else if (recipeGenerated) {
-    recipeCard = (
-      <></>
-      // <View>
-      //   {recipeDict.map((recipe, index) => (
-      //     <View key={index}>
-      //       <Text>{recipe.recipe[0]}</Text>
-      //       <Text>{recipe.ing[0]}</Text>
-      //       <Text>{recipe.inst[0]}</Text>
-      //     </View>
-      //   ))}
-      // </View>
-    );
+    recipeCard = <></>;
   }
 
   let button;
   if (image) {
-    // console.log(recipeDict.recipe);
-    // console.log(recipeDict.ing);
-    // console.log(recipeDict.inst);
     if (posArr[0]) {
       button = (
         <View
@@ -381,36 +361,6 @@ function App() {
                 }}
                 // label='EXTENDED FAB'
               />
-              {/* <Button
-                onPress={() => setGuessInc(guessInc - 1)}
-                icon="arrow-left"
-                color="orange"
-              /> */}
-              {/* <Text variant="headlineMedium">{posArr[guessInc]}</Text> */}
-              {/* <Button
-                onPress={() => setGuessInc(guessInc + 1)}
-                icon="arrow-right"
-              /> */}
-              {/* <Button
-                onPress={() => {
-                  setImage(null);
-                  setPosArr([]);
-                  setGuessInc(0);
-                }}
-                icon="redo-variant"
-              /> */}
-              {/* <Button
-                onPress={() => {
-                  setIngredients((ingredients) => [
-                    ...ingredients,
-                    posArr[guessInc],
-                  ]);
-                  setImage(null);
-                  setPosArr([]);
-                  setGuessInc(0);
-                }}
-                icon="check"
-              /> */}
             </View>
           </Card>
         </View>
@@ -464,9 +414,6 @@ function App() {
             size="large"
             onPress={storePicture}
           ></FAB>
-
-          {/* <Button onPress={() => setImage(null)} icon="redo-variant" />
-          <Button onPress={storePicture} icon="check" /> */}
         </View>
       );
     }
@@ -567,11 +514,6 @@ function App() {
         >
           <FAB
             style={{
-              // flex: 1,
-              // justifyContent: "center",
-              // alignItems: "center",
-              // width: 50,
-              // height: 50,
               backgroundColor: "white",
             }}
             animated={true}
@@ -588,21 +530,8 @@ function App() {
             }}
             // label='EXTENDED FAB'
           />
-          {/* <Button
-            icon="camera-flip"
-            onPress={() => {
-              setType(
-                type === CameraType.back ? CameraType.front : CameraType.back
-              );
-            }}
-          ></Button> */}
           <FAB
             style={{
-              // flex: 1,
-              // justifyContent: "center",
-              // alignItems: "center",
-              // width: 50,
-              // height: 50,
               backgroundColor: "white",
             }}
             animated={true}
@@ -623,18 +552,6 @@ function App() {
             }
             // label='EXTENDED FAB'
           />
-          {/* <Button
-            onPress={() =>
-              setFlash(
-                flash === Camera.Constants.FlashMode.off
-                  ? Camera.Constants.FlashMode.on
-                  : Camera.Constants.FlashMode.off
-              )
-            }
-            icon={
-              flash === Camera.Constants.FlashMode.off ? "flash" : "flash-off"
-            }
-          ></Button> */}
         </View>
         {button}
       </Camera>
@@ -642,91 +559,74 @@ function App() {
   } else if (recipeDict && recipeDict.length > 0) {
     cards = (
       <View>
-        <Card>
-          <View
-            style={{
-              flexDirection: "row",
-              marginTop: 30,
-              marginBottom: 30,
-              padding: 10,
-              width: "95%",
-              // paddingHorizontal: 50,
-            }}
+        <View
+          style={{
+            flexDirection: "row",
+            // marginTop: 30,
+            // marginBottom: 30,
+            // padding: 10,
+            // width: "95%",
+            // paddingHorizontal: 50,
+          }}
+        >
+          <ScrollView
+            horizontal={true}
+            decelerationRate={"normal"}
+            snapToInterval={ITEM_WIDTH}
+            // style={{ paddingHorizontal: 10 }}
+            showsHorizontalScrollIndicator={false}
+            bounces={false}
+            disableIntervalMomentum
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+              { useNativeDriver: false }
+            )}
+            scrollEventThrottle={12}
           >
-            <ScrollView
-              horizontal={true}
-              decelerationRate={"normal"}
-              snapToInterval={ITEM_WIDTH}
-              style={{ marginTop: 40, paddingHorizontal: 0 }}
-              showsHorizontalScrollIndicator={false}
-              bounces={false}
-              disableIntervalMomentum
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-                { useNativeDriver: false }
-              )}
-              scrollEventThrottle={12}
-            >
-              {recipeDict.map((item, idx) => {
-                const inputRange = [
-                  (idx - 1) * ITEM_WIDTH,
-                  idx * ITEM_WIDTH,
-                  (idx + 1) * ITEM_WIDTH,
-                ];
+            {recipeDict.map((item, idx) => {
+              const inputRange = [
+                (idx - 1) * ITEM_WIDTH,
+                idx * ITEM_WIDTH,
+                (idx + 1) * ITEM_WIDTH,
+              ];
 
-                const translate = scrollX.interpolate({
-                  inputRange,
-                  outputRange: [0.85, 1, 0.85],
-                });
+              const translate = scrollX.interpolate({
+                inputRange,
+                outputRange: [0.85, 1, 0.85],
+              });
 
-                const opacity = scrollX.interpolate({
-                  inputRange,
-                  outputRange: [0.5, 1, 0.5],
-                });
+              const opacity = scrollX.interpolate({
+                inputRange,
+                outputRange: [0.5, 1, 0.5],
+              });
 
-                return (
-                  <Animated.View
-                    style={{
-                      width: ITEM_WIDTH,
-                      height: ITEM_HEIGHT,
-                      marginLeft: idx === 0 ? OFFSET : undefined,
-                      marginRight:
-                        idx === recipeDict.length - 1 ? OFFSET : undefined,
-                      opacity: opacity,
-                      transform: [{ scale: translate }],
-                    }}
-                  >
-                    <Text variant="titleLarge">{item.recipe}</Text>
-                    <Text variant="titleMedium">Ingredients:</Text>
-                    {ing.map((value, index) => {
-                      <>
-                        <Text variant="titleMedium">Ingredients Array:</Text>
-                        <Text variant="titleSmall">{value}</Text>
-                      </>;
-                    })}
-                    <Text variant="titleSmall">{ing}</Text>
-                    <Text variant="titleMedium">Instructions:</Text>
-                    <Text variant="titleSmall">{item.inst}</Text>
-                  </Animated.View>
-                );
-              })}
-            </ScrollView>
-            {/* {recipeDict.map((recipe, index) => (
-            <View key={index}>
-              <Text variant="headlineMedium">{recipeDict[index].recipe}</Text>
-              <Text variant="headlineSmall">{recipeDict[index].ing}</Text>
-              <Text variant="headlineSmall">{recipeDict[index].inst}</Text>
-            </View>
-          ))} */}
-          </View>
-        </Card>
+              return (
+                <Card
+                  style={{
+                    width: ITEM_WIDTH,
+                    height: ITEM_HEIGHT,
+                    marginLeft: idx === 0 ? OFFSET : undefined,
+                    marginRight:
+                      idx === recipeDict.length - 1 ? OFFSET : undefined,
+                    opacity: opacity,
+                    transform: [{ scale: translate }],
+                  }}
+                >
+                  <Card.Title title={item.recipe} />
+                  <Card.Cover source={{ uri: item.image[0] }} />
+                  <Card.Content>
+                    <Text variant="titleLarge">Ingredients:</Text>
+                    <Text variant="bodyMedium">{item.ing}</Text>
+                    <Text variant="titleLarge">Instructions:</Text>
+                    <Text variant="bodyMedium">{item.inst}</Text>
+                  </Card.Content>
+                </Card>
+              );
+            })}
+          </ScrollView>
+        </View>
         <FAB
           style={{
-            // flex: 1,
-            // justifyContent: "center",
-            // alignItems: "center",
-            // width: 50,
-            // height: 50,
             backgroundColor: "darkorange",
           }}
           animated={true}
@@ -738,6 +638,7 @@ function App() {
           icon="redo-variant"
           onPress={() => {
             setRecipeDict([]);
+            setIngredients([]);
           }}
           // label='EXTENDED FAB'
         />
